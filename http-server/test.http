@@ -1,0 +1,27 @@
+GET http://localhost:3000/users
+
+###
+GET http://localhost:3000/user/300
+
+###
+POST http://localhost:3000/createuser
+Content-Type: application/json
+
+{
+    "id":300,
+    "name":"Shyam",
+    "city":"Mumbai"
+}
+
+###
+PUT http://localhost:3000/updateuser/100
+Content-Type: application/json
+
+{
+    "id":100,
+    "name":"Shyam chopra",
+    "city":"Mumbai"
+}
+
+###
+DELETE http://localhost:3000/removeuser/300
