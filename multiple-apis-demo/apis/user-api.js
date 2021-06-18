@@ -24,37 +24,39 @@ mc.connect(databaseUrl,{useNewUrlParser:true,useUnifiedTopology:true},(err,clien
 
 
 //get http://localhost:3000/user/getusers
+//promises 
 userApi.get('/getusers',(req,res,next)=>{
-    userCollectionsObj.find().toArray((err,usersList)=>{
-        if(err){
+    userCollectionsObj.find().toArray()
+        .then(userList=>{res.send({message:userList})})
+        .catch(err=>{
             console.log("error in reading the users list ",err)
             res.send({message: err.message})
-        }
-        else{
-            res.send({message:usersList})
-        }
-    })
+        })
 })
 
 // get http://localhost:3000/user/getusers/<username>
- userApi.get('/getusers/:username',(req,res,next)=>{
+//promises get user by username
+userApi.get('/getusers/:username',(req,res,next)=>{
 
-     //read username from url
-     let un=req.params.username;
+    //read username from url
+    let un=req.params.username;
 
-     userCollectionsObj.findOne({username:un},(err,userObj)=>{
-         if(err){
-             console.log("error in reading the user ",err)
-             res.send({message: err.message})
-         }
-         if(userObj===null){
-             res.send({message:"User not found"})
-         }
-         else{
-             res.send({message: userObj})
-         }
-     })
- })
+    userCollectionsObj.findOne({username:un})
+        .then(userObj=>{
+            if(userObj === null){
+                res.send({message:"user not found"})
+            }
+            else{
+                res.send({message:userObj})
+            }
+        })
+        .catch(err=>{
+            console.log("error in reading the user ",err)
+            res.send({message: err.message})
+        })
+
+})
+
 
 //create user
 userApi.post("/createuser",(req,res,next)=>{
