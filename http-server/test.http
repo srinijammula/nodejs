@@ -42,4 +42,43 @@ GET http://localhost:3000/read
 GET http://localhost:3000/user/getusers
 
 ###
+GET http://localhost:3000/user/getusers/ravi
+
+###
+POST http://localhost:3000/user/createuser
+Content-Type: application/json
+
+{
+    "username":"kiranchowdary",
+    "password":"kiranchowdary",
+    "email":"kiran@gmail.com",
+    "city":"rajasthan",
+    "age":35
+}
+
+###
+PUT http://localhost:3000/user/updateuser/ravi
+Content-Type: application/json
+
+{
+    "username": "ravi",
+    "password":"ravi",
+    "email": "ravi@gmail.com",
+    "city": "rajasthan",
+    "age": 100
+}
+
+###
 GET http://localhost:3000/product/getproducts
+
+###
+POST http://localhost:3000/user/login
+Content-Type: application/json
+
+{
+    "username":"kiran",
+    "password":"kiranchowdary"
+}
+
+###
+DELETE http://localhost:3000/user/deleteuser/kiran

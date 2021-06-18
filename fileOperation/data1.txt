@@ -1,2 +1,82 @@
 hello brother
 Long time damon
+
+//promises 
+userApi.get('/getusers',(req,res,next)=>{
+    userCollectionsObj.find().toArray()
+        .then(userList=>{res.send({message:userList})})
+        .catch(err=>{
+            console.log("error in reading the users list ",err)
+            res.send({message: err.message})
+        })
+})
+
+//async and await
+userApi.get('/getusers',async(req,res,next)=>{
+    let userList=await userCollectionsObj.find().toArray()
+    res.send({message:userList})
+
+})
+//promises get user by username
+userApi.get('/getusers/:username',(req,res,next)=>{
+
+     //read username from url
+     let un=req.params.username;
+
+     userCollectionsObj.findOne({username:un})
+         .then(userObj)
+
+ })
+
+//async and await
+userApi.get('/getusers/:username',async(req,res,next)=>{
+
+    //read username from url
+    let un=req.params.username;
+
+    let userObj= await userCollectionsObj.findOne({username:un})
+    if(userObj===null){
+        res.send({message:"User not found"})
+    }
+    else{
+        res.send({message: userObj})
+    }
+
+})
+
+//create
+userApi.post("/createuser",expressErrorHandler(async(req,res,next)=>{
+    let newUser=req.body;
+    //search for existing users
+    let user=await userCollectionsObj.findOne({username:newUser.username})
+    if(user!=null){
+        res.send({message:"User already existed"})
+    }
+    else{
+        //hashing
+        let hashed=await bcryptjs.hash(newUser.password,7)
+        newUser.password = hashed;
+        await userCollectionsObj.insertOne(newUser)
+        res.send({message:"User created"})
+    }
+}))
+
+//user Login
+userApi.post('/login',expressErrorHandler(async(req,res)=>{
+    let credentials=req.body;
+    let user=await userCollectionsObj.findOne({username:credentials.username})
+    if(user==null){
+        res.send({message:"Invalid username"})
+    }
+    else{
+        let result= await bcryptjs.compare(credentials.password,user.password)
+        if(result===false){
+            res.send({message:"Invalid pass"})
+        }
+        else{
+            //create token
+            let tokened=jwt.sign({username:credentials.username},'abcdef',{expiresIn:100})
+            res.send({message:"Login successful",token:tokened})
+        }
+    }
+}))
