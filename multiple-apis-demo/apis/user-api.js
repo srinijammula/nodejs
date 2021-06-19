@@ -1,8 +1,11 @@
+
+
 const exp=require("express")
 const userApi=exp.Router();
 const mc=require("mongodb").MongoClient;
-//const expressErrorHandler=require("express-async-handler")
-//const bcryptjs=require("bcryptjs")
+const jwt = require("jsonwebtoken")
+const expressErrorHandler=require("express-async-handler")
+const bcryptjs=require("bcryptjs")
 
 userApi.use(exp.json())
 
@@ -24,108 +27,97 @@ mc.connect(databaseUrl,{useNewUrlParser:true,useUnifiedTopology:true},(err,clien
 
 
 //get http://localhost:3000/user/getusers
-//promises 
-userApi.get('/getusers',(req,res,next)=>{
-    userCollectionsObj.find().toArray()
-        .then(userList=>{res.send({message:userList})})
-        .catch(err=>{
-            console.log("error in reading the users list ",err)
-            res.send({message: err.message})
-        })
-})
+userApi.get('/getusers',expressErrorHandler(async(req,res,next)=>{
+    let userList=await userCollectionsObj.find().toArray()
+    res.send({message:userList})
+}))
 
 // get http://localhost:3000/user/getusers/<username>
-//promises get user by username
-userApi.get('/getusers/:username',(req,res,next)=>{
+userApi.get('/getusers/:username',expressErrorHandler(async(req,res,next)=>{
 
     //read username from url
     let un=req.params.username;
 
-    userCollectionsObj.findOne({username:un})
-        .then(userObj=>{
-            if(userObj === null){
-                res.send({message:"user not found"})
-            }
-            else{
-                res.send({message:userObj})
-            }
-        })
-        .catch(err=>{
-            console.log("error in reading the user ",err)
-            res.send({message: err.message})
-        })
+    let userObj= await userCollectionsObj.findOne({username:un})
+    if(userObj===null){
+        res.send({message:"User not found"})
+    }
+    else{
+        res.send({message: userObj})
+    }
 
-})
+}))
 
 
 //create user
-userApi.post("/createuser",(req,res,next)=>{
+userApi.post("/createuser",expressErrorHandler(async(req,res,next)=>{
     let newUser=req.body;
-    //check user in db with given one
-    userCollectionsObj.findOne({username:newUser.username},(err,userObj)=>{
-        if(err){
-            console.log("error in creating the user ",err)
-            res.send({message: err.message})
-        }
-        if(userObj===null){
-            userCollectionsObj.insertOne(newUser,(err,success)=>{
-                if(err){
-                    console.log("error in inserting the user ",err)
-                    res.send({message: err.message})
-                }
-                else{
-                    res.send({message:"New user created"})
-                }
-            })
-        }
-        else{
-            res.send({message:"user already existed"})
-        }
-    })
-})
+    //search for existing users
+    let user=await userCollectionsObj.findOne({username:newUser.username})
+    if(user!=null){
+        res.send({message:"User already existed"})
+    }
+    else{
+        //hashing
+        let hashed=await bcryptjs.hash(newUser.password,7)
+        newUser.password = hashed;
+        await userCollectionsObj.insertOne(newUser)
+        res.send({message:"User created"})
+    }
+}))
 
 
 //http://localhost:3000/user/updateuser/<username>
-userApi.put("/updateuser/:username", (req, res, next) => {
+userApi.put("/updateuser/:username", expressErrorHandler(async(req, res, next) => {
 
     //get modified user
     let modifiedUser = req.body;
-
+    
     //update
-    userCollectionsObj.updateOne({ username: modifiedUser.username }, {
-        $set: { ...modifiedUser }
-    }, (err, success) => {
+    await userCollectionsObj.updateOne({ username: modifiedUser.username }, {$set:{ ...modifiedUser }})
+    let user = await userCollectionsObj.findOne({ username: modifiedUser.username })
+    console.log(user)
+    //send res
+    res.send({ message: "User modified" })
 
-        if (err) {
-            console.log("err in updating users data", err)
-            res.send({ message: err.message })
-        }
-        else {
-            res.send({ message: "User updated" })
-        }
-    })
-
-})
+}))
 
 //delete
-userApi.delete("/deleteuser/:username",(req,res,next)=>{
-    let un= req.params.username;
-    userCollectionsObj.findOne({username:un},(err,data)=>{
-        if (err) {
-            console.log("err in deleting user", err)
-            res.send({ message: err.message })
-        }
-        if(data===null){
-            res.send({ message: "User not existed" })
+userApi.delete("/deleteuser/:username", expressErrorHandler(async (req, res) => {
+
+    //get username from url
+    let un = req.params.username;
+    //find the user
+    let user = await userCollectionsObj.findOne({ username: un })
+
+    if (user === null) {
+        res.send({ message: "User not found" })
+    }
+    else {
+        await userCollectionsObj.deleteOne({ username: un })
+        res.send({ message: "user removed" })
+    }
+}))
+
+//user Login
+userApi.post('/login',expressErrorHandler(async(req,res)=>{
+    let credentials=req.body;
+    let user=await userCollectionsObj.findOne({username:credentials.username})
+    if(user==null){
+        res.send({message:"Invalid username"})
+    }
+    else{
+        let result= await bcryptjs.compare(credentials.password,user.password)
+        if(result===false){
+            res.send({message:"Invalid pass"})
         }
         else{
-            userCollectionsObj.deleteOne({ username: un })
-           res.send({ message: "user removed" })
+            //create token
+            let tokened=jwt.sign({username:credentials.username},'abcdef',{expiresIn:100})
+            res.send({message:"Login successful",token:tokened})
         }
-    })
-
-})
-
+    }
+}))
 
 
 //export module
